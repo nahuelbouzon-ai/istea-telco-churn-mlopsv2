@@ -1,0 +1,12 @@
+stages:
+  train_rf:
+    cmd: python src/train_rf.py
+    deps:
+      - src/train_rf.py
+      - data/processed/telco_churn_clean.csv
+      - params.yaml
+    metrics:
+      - metrics_rf.json:
+          cache: false
+    outs:
+      - models/model_rf.pkl

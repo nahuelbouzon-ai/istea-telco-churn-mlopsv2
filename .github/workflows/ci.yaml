@@ -1,0 +1,53 @@
+name: CI - DVC Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  dvc-ci:
+    runs-on: ubuntu-latest
+
+    env:
+      # Los nombres de variable deben ser DAGSHUB_USER y DAGSHUB_TOKEN
+      DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }} 
+      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          # CORRECCIÓN: Instalar DVC con soporte S3 para DagsHub
+          pip install "dvc[s3]" 
+          # ELIMINA CUALQUIER PASO EXTRA AQUÍ QUE INTENTE CONFIGURAR EL REMOTE CON 'dvc remote modify'
+
+
+      - name: DVC Pull
+        # DVC usará las variables de entorno DAGSHUB_USER y DAGSHUB_TOKEN para autenticarse
+        run: |
+          dvc pull -r dagshub_remote -v
+
+      - name: Run DVC pipeline
+        # Re-ejecuta el pipeline (limpieza, entrenamiento, métricas)
+        run: |
+          dvc repro -v
+
+      - name: Show metrics
+        # Esto publica las métricas en el log de GitHub Actions
+        run: |
+          echo "Baseline metrics:"
+          cat metrics.json || true
+          echo "RandomForest metrics:"
+          cat metrics_rf.json || true
